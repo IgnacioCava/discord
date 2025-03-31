@@ -1,0 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets   = ["native", "darwin"]
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String   @db.ObjectId @map("user_id")
+  type               String
+  provider           String
+  providerAccountId  String   @map("provider_account_id")
+  refresh_token      String?  @db.String
+  access_token       String?  @db.String
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.String
+  session_state      String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+ 
+
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[] // Link to Account model
+  sessions      Session[] // Link to Session model
+
+  messages      Message[]
+  rooms         RoomMember[] // Link to RoomMember
+  channels      ChannelMember[] // Link to RoomMember
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Room {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  members     RoomMember[]
+  channels    Channel[]
+  roles       Role[]
+  
+  createdAt   DateTime @default(now())
+}
+
+model RoomMember {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  roomId      String @db.ObjectId
+  userId      String @db.ObjectId
+  room        Room @relation(fields: [roomId], references: [id])
+  user        User @relation(fields: [userId], references: [id])
+
+  permissions Int      // Permissions as bitwise flags (integer)
+
+  // Optional direct permission overrides
+  roleId      String? @db.ObjectId
+  role        Role?   @relation("RoomRole", fields: [roleId], references: [id])
+
+  isOnline  Boolean @default(false)
+  joinedAt  DateTime @default(now())
+  lastActiveAt DateTime?
+  
+  @@unique([roomId, userId])
+}
+
+model Channel {
+  id          String          @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  room        Room            @relation(fields: [roomId], references: [id])
+  roomId      String          @db.ObjectId
+  messages    Message[]
+  members     ChannelMember[]
+  isPrivate   Boolean         @default(false)
+  description String?
+  roles       Role[]
+  type        ChannelType
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+enum ChannelType {
+  TEXT
+  VOICE
+}
+
+model ChannelMember {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id])
+  userId        String   @db.ObjectId
+  channel       Channel  @relation(fields: [channelId], references: [id])
+  channelId     String   @db.ObjectId
+
+  permissions   Int      // Permissions as bitwise flags (integer)
+
+  // Optional direct permission overrides
+  roleId      String? @db.ObjectId
+  role        Role?   @relation("ChannelRole", fields: [roleId], references: [id])
+
+  lastActiveAt  DateTime?
+  joinedAt      DateTime @default(now())
+  
+  @@unique([channelId, userId])
+}
+
+model Message {
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  content          String
+  author           User           @relation(fields: [authorId], references: [id])
+  authorId         String         @db.ObjectId
+  channel          Channel        @relation(fields: [channelId], references: [id])
+  channelId        String         @db.ObjectId
+  messageType      MessageType    @default(MESSAGE)
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  deletedAt        DateTime?
+}
+
+enum MessageType {
+  MESSAGE
+  SYSTEM
+}
+
+model Role {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String   @unique
+  roomId      String?  @db.ObjectId  // Role is specific to a room
+  channelId   String?  @db.ObjectId  // Role is specific to a channel
+  room        Room?    @relation(fields: [roomId], references: [id])
+  channel     Channel? @relation(fields: [channelId], references: [id])
+  // Relations to memberships
+  roomMembers RoomMember[] @relation("RoomRole")  // Reverse relation to RoomMember
+  channelMembers ChannelMember[] @relation("ChannelRole")  // Reverse relation to ChannelMember
+  
+  permissions  Int      @default(0)  // Bitwise flag for permissions
+  createdAt    DateTime @default(now())
+}
+
+
+// ChannelMember permissions
+// VIEW	1 (binary 00001)
+// SEND_MESSAGE	2 (binary 00010)
+// MODERATE	4 (binary 00100)
+// MANAGE_CHANNELS	8 (binary 01000)
+// BAN_USERS	16 (binary 10000)
+
+// RoomMember permissions
+// VIEW	1 (binary 00001)
+// SEND_MESSAGE	2 (binary 00010)
+// MODERATE	4 (binary 00100)
+// MANAGE_CHANNELS	8 (binary 01000)
+// BAN_USERS	16 (binary 10000)

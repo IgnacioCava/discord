@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Link from "next/link";
-import SessionWrapper from "./components/SessionWrapper";
+import LayoutWrapper from "./components/LayoutWrapper";
+import { NavBar } from "./components/NavBar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,16 +25,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <SessionWrapper>
-          <div>
-            <Link href="/">Home</Link>
-            <Link href="/users">Users</Link>
-            <Link href="/chat">Chat</Link>
+    <html lang="en" style={{ height: "100%", width: "100%", display: "flex" }}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable}`}
+        style={{
+          height: "100%",
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <LayoutWrapper>
+          <NavBar />
+          <div
+            style={{
+              padding: 10,
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              width: "100%",
+            }}
+          >
+            {children}
           </div>
-          {children}
-        </SessionWrapper>
+        </LayoutWrapper>
       </body>
     </html>
   );
