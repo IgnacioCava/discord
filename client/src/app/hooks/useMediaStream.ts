@@ -12,14 +12,18 @@ export const useMediaStream = (
     >
   >
 ) => {
-  const localAudioStreamRef = useRef<MediaStream | null>(null);
-  const localScreenStreamRef = useRef<MediaStream | null>(null);
-
+  const [localAudioStreamSource, setLocalAudioStreamSource] =
+    useState<MediaStream | null>(null);
+  const [localScreenStreamSource, setLocalScreenStreamSource] =
+    useState<MediaStream | null>(null);
+  const [localWebcamStreamSource, setLocalWebcamStreamSource] =
+    useState<MediaStream | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const screenGainNodeRef = useRef<GainNode | null>(null);
 
-  const [micAvailable, setMicAvailable] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
+
+  const [micAvailable, setMicAvailable] = useState(false);
 
   useEffect(() => {
     const setupAudioNode = async () => {
@@ -52,7 +56,11 @@ export const useMediaStream = (
       const destination = audioContext.createMediaStreamDestination();
       source.connect(gainNodeRef.current).connect(destination);
 
-      localAudioStreamRef.current = destination.stream;
+      destination.stream
+        .getTracks()
+        .forEach((track) => (track.contentHint = "speech"));
+
+      setLocalAudioStreamSource(destination.stream);
       setMicAvailable(true);
     };
 
@@ -99,96 +107,23 @@ export const useMediaStream = (
 
         // Replace screen audio track with modified one
         screenStream.removeTrack(track);
-        destination.stream
-          .getAudioTracks()
-          .forEach((track) => screenStream.addTrack(track));
-      });
-      localScreenStreamRef.current = screenStream;
-
-      Object.values(peerConnectionsRef.current).forEach(({ connection }) => {
-        const transceivers = connection.getTransceivers();
-        screenStream.getTracks().forEach((track) => {
-          let transceiver = transceivers.find(
-            (t) => t.sender.track?.kind === track.kind
-          );
-
-          if (transceiver) transceiver.sender.replaceTrack(track);
-          else
-            transceiver = connection.addTransceiver(track, {
-              direction: "sendonly",
-              streams: [screenStream],
-            });
-
-          if (track.kind === "video") {
-            setVideoBitrate(transceiver.sender, 1_000_000); // ~1 Mbps for screen sharing
-          }
-
+        destination.stream.getAudioTracks().forEach((track) => {
+          screenStream.addTrack(track);
+          track.contentHint = "detail";
           track.onended = () => {
-            console.log("onended");
-            if (transceiver) {
-              transceiver.sender.replaceTrack(null);
-
-              transceiver.stop();
-            }
-            track.stop();
-            console.log("ended share");
-            localScreenStreamRef.current = null;
+            setLocalScreenStreamSource(null);
           };
         });
       });
+      setLocalScreenStreamSource(screenStream);
     } catch (error) {
       console.error("Failed to start screen sharing:", error);
     }
   };
 
-  useEffect(() => {
-    console.log("peer");
-    if (!localScreenStreamRef.current) return;
-    localScreenStreamRef.current.getTracks().forEach((track) => {
-      console.log("track local");
-      Object.values(peerConnectionsRef.current).forEach(({ connection }) => {
-        //const senders = connection.getSenders();
-
-        const transceivers = connection.getTransceivers();
-        let transceiver = transceivers.find(
-          (t) => t.sender.track?.kind === track.kind
-        );
-        if (transceiver?.sender.track === null) {
-          transceiver.stop();
-        }
-
-        if (transceiver) transceiver.sender.replaceTrack(track);
-        else
-          transceiver = connection.addTransceiver(track, {
-            direction: "sendonly",
-            streams: [localScreenStreamRef.current!],
-          });
-
-        if (track.kind === "video") {
-          setVideoBitrate(transceiver.sender, 1_000_000); // ~1 Mbps for screen sharing
-        }
-        track.onended = () => {
-          transceiver.sender.replaceTrack(null);
-          transceiver.stop();
-          track.stop();
-          localScreenStreamRef.current = null;
-        };
-
-        connection.onconnectionstatechange = () => {
-          if (connection.connectionState === "closed") {
-            transceiver.sender.replaceTrack(null);
-            transceiver.stop();
-            track.stop();
-          }
-        };
-      });
-    });
-  }, [peerConnectionsRef]);
   const stopScreenShare = useCallback(() => {
-    if (localScreenStreamRef.current) {
-      const screenStream = localScreenStreamRef.current;
-
-      screenStream.getTracks().forEach((track) => {
+    if (localScreenStreamSource) {
+      localScreenStreamSource.getTracks().forEach((track) => {
         Object.values(peerConnectionsRef.current).forEach(({ connection }) => {
           //const senders = connection.getSenders();
           const transceivers = connection.getTransceivers();
@@ -203,9 +138,28 @@ export const useMediaStream = (
         track.stop(); // Stop the local track
       });
 
-      localScreenStreamRef.current = null;
+      setLocalScreenStreamSource(null);
     }
-  }, [peerConnectionsRef]);
+  }, [peerConnectionsRef, localScreenStreamSource]);
+
+  const startWebcam = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+      });
+
+      stream.getTracks().forEach((track) => (track.contentHint = "detail"));
+
+      setLocalWebcamStreamSource(stream);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const stopWebcam = () => {
+    if (localWebcamStreamSource)
+      localWebcamStreamSource.getTracks().forEach((track) => track.stop());
+  };
   const muteAudio = useCallback(() => {
     if (gainNodeRef.current) {
       gainNodeRef.current.gain.value = 0;
@@ -230,9 +184,10 @@ export const useMediaStream = (
     }
   }, []);
 
-  const clearAudioStream = () => {
-    localAudioStreamRef.current = null;
-    localScreenStreamRef.current = null;
+  const clearStream = () => {
+    setLocalAudioStreamSource(null);
+    setLocalScreenStreamSource(null);
+    setLocalWebcamStreamSource(null);
   };
 
   const checkGainNode = () => {
@@ -240,15 +195,18 @@ export const useMediaStream = (
   };
 
   return {
-    localAudioSource: localAudioStreamRef.current,
-    localVideoSource: localScreenStreamRef.current,
+    localAudioSource: localAudioStreamSource,
+    localVideoSource: localScreenStreamSource,
+    localWebcamSource: localWebcamStreamSource,
     muteAudio,
     unmuteAudio,
-    clearAudioStream,
     checkGainNode,
     startScreenShare,
     stopScreenShare,
     muteScreenAudio,
     unmuteScreenAudio,
+    startWebcam,
+    stopWebcam,
+    clearStream,
   };
 };

@@ -12,6 +12,7 @@ import {
 import { useMediaStream } from "./useMediaStream";
 import debounce from "lodash.debounce";
 import { setVideoBitrate } from "@/utils/setVideoBitrate";
+import { setStreamCodec } from "@/utils/setStreamCodec";
 
 export const useVoice = () => {
   const { data: session } = useSession();
@@ -42,23 +43,64 @@ export const useVoice = () => {
   } = useMediaStream(peerConnections);
 
   useEffect(() => {
+    localVideoSource?.getTracks().forEach((track) => {
+      Object.values(peerConnections.current).forEach(({ connection }) => {
+        const transceivers = connection.getTransceivers();
+        let transceiver = transceivers.find(
+          (t) => t.sender.track?.kind === track.kind
+        );
+        if (transceiver?.sender.track === null) {
+          transceiver.stop();
+        }
+
+        if (transceiver) transceiver.sender.replaceTrack(track);
+        else
+          transceiver = connection.addTransceiver(track, {
+            direction: "sendonly",
+            streams: [localVideoSource],
+          });
+        const videoCapabilities = RTCRtpReceiver.getCapabilities("video");
+        console.log(videoCapabilities);
+
+        if (track.kind === "video") {
+          setVideoBitrate(transceiver.sender, 1_000_000); // ~1 Mbps for screen sharing
+        }
+        track.onended = () => {
+          transceiver.sender.replaceTrack(null);
+          transceiver.stop();
+          track.stop();
+        };
+
+        connection.onconnectionstatechange = () => {
+          if (connection.connectionState === "closed") {
+            transceiver.sender.replaceTrack(null);
+            transceiver.stop();
+            track.stop();
+          }
+        };
+      });
+    });
+  }, [peerConnections, localVideoSource, channelId]);
+
+  useEffect(() => {
     socket.on("user-joined", async ({ userId, socketId }: UserJoinedProps) => {
       const peerConnection = createPeerConnection({ userId, socketId });
       const transceivers = peerConnection.getTransceivers();
 
       if (localAudioSource) {
-        //const senders = peerConnection.getSenders();
         localAudioSource.getTracks().forEach((track) => {
           let transceiver = transceivers.find(
             (t) => t.sender.track?.id === track.id
           );
           if (transceiver) {
+            setStreamCodec(transceiver, "audio");
             transceiver.sender.replaceTrack(track);
           } else {
             transceiver = peerConnection.addTransceiver(track, {
               direction: "sendonly",
               streams: [localAudioSource],
             });
+            setStreamCodec(transceiver, "audio");
           }
           track.onended = () => {
             if (transceiver) transceiver.stop();
@@ -66,20 +108,21 @@ export const useVoice = () => {
         });
       }
 
-
-      if (localVideoSource) {
+      if (localVideoSource && localVideoSource.active) {
         //const senders = peerConnection.getSenders();
         localVideoSource.getTracks().forEach((track) => {
           let transceiver = transceivers.find(
             (t) => t.sender.track?.id === track.id
           );
           if (transceiver) {
+            setStreamCodec(transceiver, "video");
             transceiver.sender.replaceTrack(track);
           } else {
             transceiver = peerConnection.addTransceiver(track, {
               direction: "sendonly",
               streams: [localVideoSource],
             });
+            setStreamCodec(transceiver, "video");
           }
           setVideoBitrate(transceiver.sender, 1_000_000); // ~1 Mbps for screen sharing
 
@@ -119,29 +162,39 @@ export const useVoice = () => {
             (t) => t.sender.track?.id === track.id
           );
           if (transceiver) {
+            setStreamCodec(transceiver, "audio");
             transceiver.sender.replaceTrack(track);
           } else {
             transceiver = peerConnection.addTransceiver(track, {
               direction: "sendonly",
               streams: [localAudioSource],
             });
+            setStreamCodec(transceiver, "audio");
+          }
+          const audioCapabilities = RTCRtpReceiver.getCapabilities("audio");
+          const preferredAudioCodecs = audioCapabilities?.codecs.filter(
+            (codec) => codec.mimeType === "audio/opus"
+          );
+          if (preferredAudioCodecs && preferredAudioCodecs.length > 0) {
+            transceiver?.setCodecPreferences(preferredAudioCodecs);
           }
         });
       }
-
-      if (localVideoSource) {
+      if (localVideoSource && localVideoSource.active) {
         const transceivers = peerConnection.getTransceivers();
         localVideoSource.getTracks().forEach((track) => {
           let transceiver = transceivers.find(
             (t) => t.sender.track?.id === track.id
           );
           if (transceiver) {
+            setStreamCodec(transceiver, "video");
             transceiver.sender.replaceTrack(track);
           } else {
             transceiver = peerConnection.addTransceiver(track, {
               direction: "sendonly",
               streams: [localVideoSource],
             });
+            setStreamCodec(transceiver, "video");
           }
           setVideoBitrate(transceiver.sender, 1_000_000); // ~1 Mbps for screen sharing
         });
@@ -319,13 +372,15 @@ export const useVoice = () => {
     socket.emit("leave-voice-channel", channelId);
     Object.values(peerConnections.current).forEach(({ connection }) => {
       connection.getTransceivers().forEach((transceiver) => {
-        if (transceiver.sender.track) {
-          transceiver.sender.replaceTrack(null); // Ensure no track is sent
-        }
+        console.log({ transceiver });
+        transceiver.sender.replaceTrack(null); // Ensure no track is sent
         transceiver.stop();
       });
 
       connection.close();
+    });
+    localVideoSource?.getTracks().forEach((track) => {
+      track.stop();
     });
     peerConnections.current = {};
 
