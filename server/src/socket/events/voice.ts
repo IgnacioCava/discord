@@ -16,7 +16,6 @@ export const setupVoiceSocket = (io: Io, socket: SocketServer) => {
   const userId = socket.userDB?.id;
   if (!socketId || !userId) return;
   socket.on("join-voice-channel", (channelId: string) => {
-    console.log(roomMembers[`voicechat-${channelId}`]?.has(userId))
     if(!roomMembers[`voicechat-${channelId}`]?.has(userId)){
       socket.join(`voicechat-${channelId}`);
       if (!roomMembers[`voicechat-${channelId}`]) {
@@ -85,9 +84,7 @@ export const setupVoiceSocket = (io: Io, socket: SocketServer) => {
   });
 
   socket.on("disconnect", (e) => {
-    console.log(socket.userDB)
     Object.entries(roomMembers).forEach(([channelId, members]) => {
-      console.log(members)
       if (members.has(userId)) {
         io.to(`${channelId}`).emit("user-left", { userId, socketId });
         members.delete(userId);

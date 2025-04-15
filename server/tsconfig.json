@@ -16,6 +16,7 @@
       "@prisma": ["src/prisma"],
       "@prisma/*": ["src/prisma/*"],
       "@types/*": ["src/types/*"],
+      "@customTypes/*": ["src/customTypes/*"],
       "@services/*": ["src/services/*"],
       "@controllers/*": ["src/controllers/*"],
       "@utils/*": ["src/utils/*"],

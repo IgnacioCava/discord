@@ -10,7 +10,9 @@ import Image from "next/image";
 import { useMessageListener } from "../hooks/useMessageHandler";
 import { useSocket } from "./SocketProvider";
 import TypingIndicator from "./TypingIndicator";
-import VoiceChat from "./VoiceChat";
+// import VoiceChat from "./VoiceChat";
+// import SFUVoiceChatTest from "./SFUVoiceChatTest";
+import SFUVoiceTest2 from "./SFUVoiceTest2";
 
 const ChatBox = ({ channel }: { channel: Channel }) => {
   const { data: session } = useSession();
@@ -134,7 +136,8 @@ const ChatBox = ({ channel }: { channel: Channel }) => {
       <button onClick={() => socket.emit("typing-check")}>typing check</button>
       <button onClick={() => socket.disconnect()}>disconnect</button>
       <button onClick={() => socket.connect()}>connect</button>
-      {channel.type === "VOICE" && <VoiceChat roomId={channel.id} />}
+      {channel.type === "VOICE" && <SFUVoiceTest2 channelId={channel.id} />}
+
       {channel.type === "TEXT" && (
         <div
           style={{

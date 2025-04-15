@@ -1,17 +1,6 @@
-import { setVideoBitrate } from "@/utils/setVideoBitrate";
-import { RefObject, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-export const useMediaStream = (
-  peerConnectionsRef: RefObject<
-    Record<
-      string,
-      {
-        connection: RTCPeerConnection;
-        socketId: string;
-      }
-    >
-  >
-) => {
+export const useMediaStream = () => {
   const [localAudioStreamSource, setLocalAudioStreamSource] =
     useState<MediaStream | null>(null);
   const [localScreenStreamSource, setLocalScreenStreamSource] =
@@ -84,7 +73,7 @@ export const useMediaStream = (
       navigator.mediaDevices.ondevicechange = null;
       window.removeEventListener("click", handleUserInteraction);
     };
-  }, [peerConnectionsRef]);
+  }, []);
 
   const startScreenShare = async () => {
     try {
@@ -121,26 +110,17 @@ export const useMediaStream = (
     }
   };
 
-  const stopScreenShare = useCallback(() => {
-    if (localScreenStreamSource) {
-      localScreenStreamSource.getTracks().forEach((track) => {
-        Object.values(peerConnectionsRef.current).forEach(({ connection }) => {
-          //const senders = connection.getSenders();
-          const transceivers = connection.getTransceivers();
-          const transceiver = transceivers.find(
-            (t) => t.sender.track?.id === track.id
-          );
-          if (transceiver) {
-            transceiver.sender.replaceTrack(null);
-            transceiver.stop();
-          } // Properly stops transmission and removes the sender
+  const stopScreenShare = useCallback(
+    (callback: (trackId: string) => void) => {
+      if (localScreenStreamSource) {
+        localScreenStreamSource.getTracks().forEach((track) => {
+          callback(track.id);
         });
-        track.stop(); // Stop the local track
-      });
-
-      setLocalScreenStreamSource(null);
-    }
-  }, [peerConnectionsRef, localScreenStreamSource]);
+        setLocalScreenStreamSource(null);
+      }
+    },
+    [localScreenStreamSource]
+  );
 
   const startWebcam = async () => {
     try {
@@ -208,5 +188,6 @@ export const useMediaStream = (
     startWebcam,
     stopWebcam,
     clearStream,
+    micAvailable
   };
 };

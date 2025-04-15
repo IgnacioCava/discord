@@ -6,5 +6,6 @@ declare module 'socket.io' {
   interface Socket {
     user?: JwtPayload | null;
     userDB?: User | null
+    roomId?: string
   }
 }

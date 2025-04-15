@@ -6,7 +6,7 @@ import {
   clearTypingOnDisconnect,
   removeUserFromTypingList,
 } from "@controllers/channelController";
-import redis from "@lib/redis"; // Assuming this is your Redis instance
+import redis from "@lib/redis";
 
 const typingUsers: Record<
   string,
