@@ -14,33 +14,31 @@ import debounce from "lodash.debounce";
 import { setVideoBitrate } from "@/utils/setVideoBitrate";
 import { setStreamCodec } from "@/utils/setStreamCodec";
 
-export const useVoice = () => {
+type Streams = {
+  userId: string;
+  socketId: string;
+  stream: MediaStream;
+}[];
+
+export const useVoiceChat = () => {
   const { data: session } = useSession();
   const peerConnections = useRef<
     Record<string, { connection: RTCPeerConnection; socketId: string }>
   >({});
-  //const localStreamRef = useRef<MediaStream | null>(null);
-  const [remoteStreams, setRemoteStreams] = useState<
-    { userId: string; socketId: string; stream: MediaStream }[]
-  >([]);
-  const [remoteVideoStreams, setRemoteVideoStreams] = useState<
-    { userId: string; socketId: string; stream: MediaStream }[]
-  >([]);
-  //const gainNodeRef = useRef<GainNode | null>(null);
-  const [micAvailable, setMicAvailable] = useState(false);
+  const [remoteStreams, setRemoteStreams] = useState<Streams>([]);
+  const [remoteVideoStreams, setRemoteVideoStreams] = useState<Streams>([]);
   const [channelId, setChannelId] = useState<string | null>(null);
   const {
     localAudioSource,
     localVideoSource,
     muteAudio,
     unmuteAudio,
-    clearAudioStream,
     checkGainNode,
     startScreenShare,
     stopScreenShare,
     muteScreenAudio,
     unmuteScreenAudio,
-  } = useMediaStream(peerConnections);
+  } = useMediaStream();
 
   useEffect(() => {
     localVideoSource?.getTracks().forEach((track) => {
@@ -59,8 +57,6 @@ export const useVoice = () => {
             direction: "sendonly",
             streams: [localVideoSource],
           });
-        const videoCapabilities = RTCRtpReceiver.getCapabilities("video");
-        console.log(videoCapabilities);
 
         if (track.kind === "video") {
           setVideoBitrate(transceiver.sender, 1_000_000); // ~1 Mbps for screen sharing
@@ -389,6 +385,22 @@ export const useVoice = () => {
     //clearAudioStream();
   };
 
+  const closeScreenShare = () => {
+    const callback = (trackId: string) => {
+      Object.values(peerConnections.current).forEach(({ connection }) => {
+        const transceivers = connection.getTransceivers();
+        const transceiver = transceivers.find(
+          (t) => t.sender.track?.id === trackId
+        );
+        if (transceiver) {
+          transceiver.sender.replaceTrack(null);
+          transceiver.stop();
+        }
+      });
+    };
+    stopScreenShare(callback);
+  };
+
   return {
     startVoiceChat,
     leaveVoiceChat,
@@ -399,7 +411,7 @@ export const useVoice = () => {
     unmuteAudio,
     checkGainNode,
     startScreenShare,
-    stopScreenShare,
+    closeScreenShare,
     muteScreenAudio,
     unmuteScreenAudio,
   };

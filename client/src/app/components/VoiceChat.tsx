@@ -1,8 +1,6 @@
-import { useVoice } from "../hooks/useVoiceChat";
-
+import { useVoiceChat } from "../hooks/useVoiceChat";
+import { useVoiceClient } from "../hooks/useSFUVoiceClient";
 export default function VoiceChat({ roomId }: { roomId: string }) {
-  // const { startVoiceChat, leaveVoiceChat, localStream, remoteStreams } =
-  //   useVoiceChat();
   const {
     startVoiceChat,
     leaveVoiceChat,
@@ -12,11 +10,12 @@ export default function VoiceChat({ roomId }: { roomId: string }) {
     unmuteAudio,
     checkGainNode,
     startScreenShare,
-    stopScreenShare,
-    localAudioSource,
+    closeScreenShare,
     muteScreenAudio,
     unmuteScreenAudio,
-  } = useVoice();
+  } = useVoiceChat();
+
+  //const {joinVoice, consumeAudio} = useVoiceClient(roomId)
 
   return (
     <div>
@@ -27,7 +26,7 @@ export default function VoiceChat({ roomId }: { roomId: string }) {
       <button onClick={() => unmuteAudio()}>unmute mic</button>
       <button onClick={() => checkGainNode()}>check gain</button>
       <button onClick={() => startScreenShare()}>screenshare</button>
-      <button onClick={() => stopScreenShare()}>stop screenshare</button>
+      <button onClick={() => closeScreenShare()}>stop screenshare</button>
       <button onClick={() => muteScreenAudio()}>mute screen</button>
       <button onClick={() => unmuteScreenAudio()}>unmute screen</button>
 

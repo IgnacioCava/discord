@@ -1,6 +1,10 @@
 "use client";
 
-import socket, { connectSocket } from "@/lib/socket";
+import socket, {
+  connectSocket,
+  sfuSocket,
+  connectSfuSocket,
+} from "@/lib/socket";
 import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
@@ -8,6 +12,10 @@ import { createContext, useContext, useEffect, useState } from "react";
 interface SocketContextType {
   transport: string;
   isConnected: boolean;
+  sfuTransport: string;
+  sfuIsConnected: boolean;
+  initiateSfuSocket: () => void;
+  disconnectSfuSocket: () => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -15,6 +23,8 @@ const SocketContext = createContext<SocketContextType | undefined>(undefined);
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [transport, setTransport] = useState("N/A");
+  const [sfuIsConnected, setSfeIsConnected] = useState(false);
+  const [sfuTransport, setSfeTransport] = useState("N/A");
   const router = useRouter();
   const path = usePathname();
 
@@ -47,16 +57,51 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     initiateSocketConnection();
+    initiateSfuSocket()
     
     return () => {
       socket.off("connect");
       socket.off("disconnect");
       socket.disconnect();
+      sfuSocket.off("connect");
+      sfuSocket.off("disconnect");
+      sfuSocket.disconnect();
     };
   }, [status, data]);
 
+  const initiateSfuSocket = async () => {
+    function onConnect() {
+      setSfeIsConnected(true);
+      setSfeTransport(sfuSocket.io.engine.transport.name);
+      sfuSocket.io.engine.on("upgrade", (transport) => {
+        setSfeTransport(transport.name);
+      });
+    }
+
+    function onDisconnect() {
+      setSfeIsConnected(false);
+      setSfeTransport("N/A");
+    }
+    await connectSfuSocket();
+    sfuSocket.on("connect", onConnect);
+    sfuSocket.on("disconnect", onDisconnect);
+  };
+
+  const disconnectSfuSocket = async () => {
+    sfuSocket.disconnect();
+  };
+
   return (
-    <SocketContext.Provider value={{ transport, isConnected }}>
+    <SocketContext.Provider
+      value={{
+        transport,
+        isConnected,
+        sfuTransport,
+        sfuIsConnected,
+        initiateSfuSocket,
+        disconnectSfuSocket,
+      }}
+    >
       {children}
     </SocketContext.Provider>
   );

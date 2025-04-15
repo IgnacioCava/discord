@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "dev": "concurrently \"yarn start-front\" \"yarn start-back\" --names \"frontend,backend\" --prefix \"[{name}]\"",
-    "start-front": "cd client && yarn dev",
+    "start-front": "cd client && yarn devx",
     "start-back": "cd server && yarn dev"
   },
   "devDependencies": {

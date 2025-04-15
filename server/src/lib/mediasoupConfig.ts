@@ -8,8 +8,8 @@ import {
 export const workerSettings: WorkerSettings = {
   logLevel: "warn",
   logTags: ["info", "ice", "dtls", "rtp", "srtp", "rtcp"],
-  rtcMinPort: 10000,
-  rtcMaxPort: 20000,
+  rtcMinPort: 40000,
+  rtcMaxPort: 49999,
 };
 
 export const routerOptions: RouterOptions = {
@@ -20,14 +20,22 @@ export const routerOptions: RouterOptions = {
       clockRate: 48000,
       channels: 2,
     },
+    {
+      kind: "video",
+      mimeType: "video/VP8",
+      clockRate: 90000,
+      parameters: {
+        "x-google-start-bitrate": 300,
+      },
+    },
   ],
 };
 
 export const webRtcTransportOptions: WebRtcTransportOptions = {
   listenIps: [
     {
-      ip: "localhost", // Use 'localhost' for local testing, '0.0.0.0' for production
-      announcedIp: process.env.PUBLIC_IP || undefined,
+      ip: "127.0.0.1", // Use 'localhost' for local testing, '0.0.0.0' for production
+      announcedIp: process.env.PUBLIC_IP || "127.0.0.1",
     },
   ],
   enableUdp: true,
