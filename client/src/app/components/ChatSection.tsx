@@ -29,7 +29,7 @@ export const ChatSection = () => {
   const sendMessage = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!channel.id) return;
+    if (!activeChannelId) return;
     const formData = new FormData(event.currentTarget);
     const content = formData.get("sendmessage") as string;
 
@@ -41,14 +41,14 @@ export const ChatSection = () => {
         tempId, // Temporary ID for optimistic UI,
         content,
         authorId: session.user.id,
-        channelId: channel.id,
+        channelId: activeChannelId,
         author: session.user,
         messageType: "MESSAGE",
         createdAt: new Date(),
         updatedAt: null,
         deletedAt: null,
       };
-      addMessage(channel.id, messageData);
+      addMessage(activeChannelId, messageData);
       socket.emit("send-message", messageData, (ack: Message) => {
         verifySentMessage(ack.channelId, ack);
       });
@@ -62,6 +62,7 @@ export const ChatSection = () => {
     msg: Message
   ) => {
     event.preventDefault();
+    if (!activeChannelId) return;
     const formData = new FormData(event.currentTarget);
     const content = formData.get("updatemessage") as string;
     const updateMessageData: Message = {
@@ -69,7 +70,7 @@ export const ChatSection = () => {
       content,
       status: "Pending",
     };
-    updateMessage(channel.id, updateMessageData);
+    updateMessage(activeChannelId, updateMessageData);
     socket.emit(
       "edit-message",
       {
@@ -80,7 +81,8 @@ export const ChatSection = () => {
       },
       (ack: Message) => {
         if (ack.status === "Success") verifyUpdatedMessage(ack.channelId, ack);
-        else revertUpdateMessage(channel.id, ack.id, ack.content, ack.status); // server sends content as prevContent
+        else
+          revertUpdateMessage(activeChannelId, ack.id, ack.content, ack.status); // server sends content as prevContent
       }
     );
 
@@ -121,40 +123,50 @@ export const ChatSection = () => {
       }}
     >
       <div style={{ flex: 1, overflow: "auto" }}>
-        {messages[activeChannelId].map((msg, index) => (
-          <div
-            key={index}
-            style={{ display: "flex", alignItems: "center", gap: 10 }}
-          >
-            {msg.messageType === "MESSAGE" && msg.author.image && (
-              <Image src={msg.author.image} height={40} width={40} alt="some" />
-            )}
-            {msg.messageType === "SYSTEM" ? (
-              "System: "
-            ) : (
-              <strong>
-                {msg.authorId === session?.user.id ? "You" : msg.author?.name}:
-              </strong>
-            )}
-            {msg.content}{" "}
-            <span
-              style={{
-                color:
-                  msg.status === "Pending"
-                    ? "lightblue"
-                    : msg.status === "Error"
-                    ? "red"
-                    : "green",
-              }}
-            >
-              <span>{msg.status || "Success"}</span>
-            </span>
-            <form onSubmit={(event) => handleEditMessage(event, msg)}>
-              <input placeholder={msg.content} name="updatemessage" />
-              <button type="submit">Edit</button>
-            </form>
-          </div>
-        ))}
+        {activeChannelId
+          ? messages[activeChannelId].map((msg, index) => (
+              <div
+                key={index}
+                style={{ display: "flex", alignItems: "center", gap: 10 }}
+              >
+                {msg.messageType === "MESSAGE" && msg.author.image && (
+                  <Image
+                    src={msg.author.image}
+                    height={40}
+                    width={40}
+                    alt="some"
+                  />
+                )}
+                {msg.messageType === "SYSTEM" ? (
+                  "System: "
+                ) : (
+                  <strong>
+                    {msg.authorId === session?.user.id
+                      ? "You"
+                      : msg.author?.name}
+                    :
+                  </strong>
+                )}
+                {msg.content}{" "}
+                <span
+                  style={{
+                    color:
+                      msg.status === "Pending"
+                        ? "lightblue"
+                        : msg.status === "Error"
+                        ? "red"
+                        : "green",
+                  }}
+                >
+                  <span>{msg.status || "Success"}</span>
+                </span>
+                <form onSubmit={(event) => handleEditMessage(event, msg)}>
+                  <input placeholder={msg.content} name="updatemessage" />
+                  <button type="submit">Edit</button>
+                </form>
+              </div>
+            ))
+          : null}
       </div>
       <TypingIndicator />
       <form style={{ display: "flex" }} onSubmit={sendMessage}>
