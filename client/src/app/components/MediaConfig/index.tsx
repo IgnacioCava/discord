@@ -55,7 +55,9 @@ export const MediaConfig = () => {
               }
               className={S.Option({
                 active:
-                  localVideoSource && mediaState.screen ? true : "default",
+                  activeChannelId && localVideoSource && mediaState.screen
+                    ? true
+                    : "default",
               })}
             >
               🖥️

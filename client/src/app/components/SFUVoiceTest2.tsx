@@ -344,8 +344,7 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
     try {
       if (!sendTransport) return;
 
-      startWebcam();
-      const stream = localWebcamSource;
+      const stream = await startWebcam();
       if (!stream) return;
       setLocalStream(localWebcamSource);
 
@@ -393,7 +392,6 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
       track: screenTrack,
     });
     newScreenProducer.on("trackended", () => {
-      // console.log("trackended")
       sfuSocket.emit("close-producer", {
         producerId: newScreenProducer.id,
         roomId,
@@ -402,16 +400,14 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
     });
     setScreenProducer(newScreenProducer);
 
-    stream.getVideoTracks().forEach((track, index) => {
+    stream.getVideoTracks().forEach((track) => {
       track.onended = () => {
-        console.log("ended", index);
         stopScreenShare();
       };
     });
   };
 
   const stopScreen = () => {
-    console.log(screenProducer);
     if (screenProducer) {
       stopScreenShare();
       screenProducer.close();
@@ -439,7 +435,7 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
         prev.filter((stream) => stream.producerId !== producerId)
       );
   };
-  console.log(remoteVideoStreams);
+
   return (
     <div>
       <h1>Mediasoup</h1>

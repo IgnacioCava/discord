@@ -20,7 +20,7 @@ interface MediaConfigContextType {
   stopScreenShare: (callback?: (trackId: string) => void) => void;
   muteScreenAudio: () => void;
   unmuteScreenAudio: () => void;
-  startWebcam: () => void;
+  startWebcam: () => Promise<MediaStream | undefined>;
   stopWebcam: () => void;
   clearStream: () => void;
   checkGainNode: () => void;
@@ -74,67 +74,64 @@ export const LocalMediaConfigProvider = ({
 
   const [micAvailable, setMicAvailable] = useState(false);
 
-  const setupAudioNode = useCallback(
-    async () => {
-      const localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
+  const setupAudioNode = useCallback(async () => {
+    const localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+    });
 
-      // Create or reuse AudioContext
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
-      const audioContext = audioContextRef.current;
+    // Create or reuse AudioContext
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    const audioContext = audioContextRef.current;
 
-      if (audioContext.state === "suspended") {
-        await audioContext.resume();
-      }
+    if (audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
 
-      const audioTrack = localStream.getAudioTracks()[0];
-      audioTrack.onended = () => {
-        console.log("🎧 Audio track ended");
-        setMicAvailable(false);
-        toggleMediaState({ mic: false });
-      };
+    const audioTrack = localStream.getAudioTracks()[0];
+    audioTrack.onended = () => {
+      console.log("🎧 Audio track ended");
+      setMicAvailable(false);
+      toggleMediaState({ mic: false });
+    };
 
-      const source = audioContext.createMediaStreamSource(
-        new MediaStream([audioTrack])
-      );
-      micGainNodeRef.current = audioContext.createGain();
-      micGainNodeRef.current.gain.value = 1;
+    const source = audioContext.createMediaStreamSource(
+      new MediaStream([audioTrack])
+    );
+    micGainNodeRef.current = audioContext.createGain();
+    micGainNodeRef.current.gain.value = 1;
 
-      const destination = audioContext.createMediaStreamDestination();
-      source.connect(micGainNodeRef.current).connect(destination);
+    const destination = audioContext.createMediaStreamDestination();
+    source.connect(micGainNodeRef.current).connect(destination);
 
-      destination.stream
-        .getTracks()
-        .forEach((track) => (track.contentHint = "speech"));
+    destination.stream
+      .getTracks()
+      .forEach((track) => (track.contentHint = "speech"));
 
-      // const analyser = audioContext.createAnalyser();
-      // analyser.fftSize = 128;
-      // const dataArray = new Uint8Array(analyser.fftSize);
+    // const analyser = audioContext.createAnalyser();
+    // analyser.fftSize = 128;
+    // const dataArray = new Uint8Array(analyser.fftSize);
 
-      // micGainNodeRef.current.connect(analyser);
+    // micGainNodeRef.current.connect(analyser);
 
-      // const detectVolume = () => {
-      //   analyser.getByteTimeDomainData(dataArray);
-      //   let max = 0;
-      //   for (let i = 0; i < dataArray.length; i++) {
-      //     const val = Math.abs(dataArray[i] - 128);
-      //     if (val > max) max = val;
-      //   }
+    // const detectVolume = () => {
+    //   analyser.getByteTimeDomainData(dataArray);
+    //   let max = 0;
+    //   for (let i = 0; i < dataArray.length; i++) {
+    //     const val = Math.abs(dataArray[i] - 128);
+    //     if (val > max) max = val;
+    //   }
 
-      //   setNoiseLevel(max > 5 ? max : 0);
-      //   requestAnimationFrame(detectVolume);
-      // };
-      // detectVolume();
-      // console.log("test");
-      setLocalAudioStreamSource(destination.stream);
-      setMicAvailable(true);
-      toggleMediaState({ mic: true });
-    },
-    []
-  );
+    //   setNoiseLevel(max > 5 ? max : 0);
+    //   requestAnimationFrame(detectVolume);
+    // };
+    // detectVolume();
+    // console.log("test");
+    setLocalAudioStreamSource(destination.stream);
+    setMicAvailable(true);
+    toggleMediaState({ mic: true });
+  }, []);
 
   useEffect(() => {
     const handleDeviceChange = async () => {
@@ -224,7 +221,7 @@ export const LocalMediaConfigProvider = ({
       });
       setLocalScreenStreamSource(screenStream);
       toggleMediaState({ screen: true });
-      return screenStream
+      return screenStream;
     } catch (error) {
       console.error("Failed to start screen sharing:", error);
     }
@@ -252,6 +249,7 @@ export const LocalMediaConfigProvider = ({
       stream.getTracks().forEach((track) => (track.contentHint = "detail"));
 
       setLocalWebcamStreamSource(stream);
+      return stream;
       toggleMediaState({ webcam: true });
     } catch (error) {
       console.log(error);
@@ -327,27 +325,6 @@ export const LocalMediaConfigProvider = ({
       {children}
     </MediaConfigContext.Provider>
   );
-
-  // return {
-  //   localAudioSource: localAudioStreamSource,
-  //   muteAudio,
-  //   unmuteAudio,
-  //   localVideoSource: localScreenStreamSource,
-  //   startScreenShare,
-  //   stopScreenShare,
-  //   muteScreenAudio,
-  //   unmuteScreenAudio,
-  //   localWebcamSource: localWebcamStreamSource,
-  //   startWebcam,
-  //   stopWebcam,
-  //   clearStream,
-  //   checkGainNode,
-  //   micAvailable,
-  //   mediaState,
-  //   noiseLevel,
-  //   startVolumeDetector,
-  //   stopVolumeDetector,
-  // };
 };
 
 export const useLocalMedia = () => {
