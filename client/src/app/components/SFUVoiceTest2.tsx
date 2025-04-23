@@ -14,6 +14,7 @@ import {
   MediaKind,
   RtpParameters,
 } from "mediasoup-client/types";
+import { useLocalMedia } from "../providers/MediaConfigProvider";
 
 interface TransportOptions {
   id: string;
@@ -42,6 +43,15 @@ interface RemoteStream {
 }
 
 export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
+  const {
+    localAudioSource,
+    localVideoSource,
+    localWebcamSource,
+    startScreenShare,
+    stopScreenShare,
+    startWebcam,
+    stopWebcam,
+  } = useLocalMedia();
   const [device, setDevice] = useState<DeviceType | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteAudioStreams, setRemoteAudioStreams] = useState<RemoteStream[]>(
@@ -154,10 +164,8 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
   };
 
   const getLocalAudioStreamAndTrack = async () => {
-    const audioStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-    });
-    const audioTrack = audioStream.getAudioTracks()[0];
+    if (!localAudioSource) return;
+    const audioTrack = localAudioSource.getAudioTracks()[0];
     return audioTrack;
   };
 
@@ -240,21 +248,21 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
       setRemoteAudioStreams([]);
       setRemoteVideoStreams([]);
 
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
-        setLocalStream(null);
-      }
-      if (sendTransport) {
-        sendTransport.close();
-        setSendTransport(null);
-      }
-      if (recvTransport) {
-        recvTransport.close();
-        setRecvTransport(null);
-      }
-      if (device) {
-        setDevice(null);
-      }
+      // if (localStream) {
+      //   localStream.getTracks().forEach((track) => track.stop());
+      //   setLocalStream(null);
+      // }
+      // if (sendTransport) {
+      //   sendTransport.close();
+      //   setSendTransport(null);
+      // }
+      // if (recvTransport) {
+      //   recvTransport.close();
+      //   setRecvTransport(null);
+      // }
+      // if (device) {
+      //   setDevice(null);
+      // }
     });
   };
 
@@ -336,10 +344,10 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
     try {
       if (!sendTransport) return;
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-      });
-      setLocalStream(stream);
+      startWebcam();
+      const stream = localWebcamSource;
+      if (!stream) return;
+      setLocalStream(localWebcamSource);
 
       if (localVideoRef.current) {
         localVideoRef.current = stream;
@@ -360,6 +368,7 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
       setLocalStream(null);
+      stopWebcam();
     }
     if (localVideoRef.current) {
       localVideoRef.current = null;
@@ -374,13 +383,10 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
     }
   };
 
-  const startScreenShare = async () => {
+  const startScreen = async () => {
     if (!sendTransport) return;
-
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-    });
-
+    const stream = await startScreenShare();
+    if (!stream) return;
     const screenTrack = stream.getVideoTracks()[0];
 
     const newScreenProducer = await sendTransport.produce({
@@ -404,9 +410,10 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
     });
   };
 
-  const stopScreenShare = () => {
+  const stopScreen = () => {
     console.log(screenProducer);
     if (screenProducer) {
+      stopScreenShare();
       screenProducer.close();
       sfuSocket.emit("close-producer", {
         producerId: screenProducer.id,
@@ -432,7 +439,7 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
         prev.filter((stream) => stream.producerId !== producerId)
       );
   };
-
+  console.log(remoteVideoStreams);
   return (
     <div>
       <h1>Mediasoup</h1>
@@ -448,7 +455,7 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
           <button onClick={localStream ? stopCamera : startCamera}>
             {localStream ? "Stop Camera" : "Start Camera"}
           </button>
-          <button onClick={screenProducer ? stopScreenShare : startScreenShare}>
+          <button onClick={screenProducer ? stopScreen : startScreen}>
             {screenProducer ? "Stop Screen Share" : "Start Screen Share"}
           </button>
         </div>
@@ -483,6 +490,7 @@ export default function SFUVoiceTest2({ channelId }: { channelId: string }) {
           <div key={data.stream.id}>
             {data.peerId}
             <video
+              style={{ width: "100%" }}
               ref={(audio) => {
                 if (audio) {
                   audio.srcObject = data.stream;

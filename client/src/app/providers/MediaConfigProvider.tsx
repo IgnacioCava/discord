@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 type MediaKey = "mic" | "screen" | "webcam";
 
@@ -6,7 +13,40 @@ type AtLeastOne<T extends Record<string, unknown>> = {
   [K in keyof T]: Pick<T, K> & Partial<Omit<T, K>>;
 }[keyof T];
 
-export const useMediaStream = () => {
+interface MediaConfigContextType {
+  muteAudio: () => void;
+  unmuteAudio: () => void;
+  startScreenShare: () => Promise<MediaStream | undefined>;
+  stopScreenShare: (callback?: (trackId: string) => void) => void;
+  muteScreenAudio: () => void;
+  unmuteScreenAudio: () => void;
+  startWebcam: () => void;
+  stopWebcam: () => void;
+  clearStream: () => void;
+  checkGainNode: () => void;
+  startVolumeDetector: () => void;
+  stopVolumeDetector: () => void;
+  localAudioSource: MediaStream | null;
+  localVideoSource: MediaStream | null;
+  localWebcamSource: MediaStream | null;
+  micAvailable: boolean;
+  mediaState: {
+    mic: boolean;
+    screen: boolean;
+    webcam: boolean;
+  };
+  noiseLevel: number | null;
+}
+
+const MediaConfigContext = createContext<MediaConfigContextType | undefined>(
+  undefined
+);
+
+export const LocalMediaConfigProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const [mediaState, setMediaState] = useState({
     mic: false,
     screen: false,
@@ -18,7 +58,7 @@ export const useMediaStream = () => {
     useState<MediaStream | null>(null);
   const [localWebcamStreamSource, setLocalWebcamStreamSource] =
     useState<MediaStream | null>(null);
-  
+
   const micGainNodeRef = useRef<GainNode | null>(null);
   const screenGainNodeRef = useRef<GainNode | null>(null);
 
@@ -34,8 +74,8 @@ export const useMediaStream = () => {
 
   const [micAvailable, setMicAvailable] = useState(false);
 
-  useEffect(() => {
-    const setupAudioNode = async () => {
+  const setupAudioNode = useCallback(
+    async () => {
       const localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
@@ -92,8 +132,11 @@ export const useMediaStream = () => {
       setLocalAudioStreamSource(destination.stream);
       setMicAvailable(true);
       toggleMediaState({ mic: true });
-    };
+    },
+    []
+  );
 
+  useEffect(() => {
     const handleDeviceChange = async () => {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const micDevice = devices.find((device) => device.kind === "audioinput");
@@ -114,7 +157,7 @@ export const useMediaStream = () => {
       navigator.mediaDevices.ondevicechange = null;
       window.removeEventListener("click", handleUserInteraction);
     };
-  }, []);
+  }, [setupAudioNode]);
 
   const startVolumeDetector = () => {
     if (noiseAnalyser.current) return;
@@ -135,7 +178,6 @@ export const useMediaStream = () => {
       }
 
       setNoiseLevel(max > 5 ? max : 0);
-      console.log(max);
       animationFrameId.current = requestAnimationFrame(detectVolume);
     };
     detectVolume();
@@ -155,7 +197,13 @@ export const useMediaStream = () => {
         video: true,
         audio: true, // Request screen audio if available
       });
-
+      screenStream.getVideoTracks().forEach((track) => {
+        track.contentHint = "detail";
+        track.onended = () => {
+          setLocalScreenStreamSource(null);
+          toggleMediaState({ screen: false });
+        };
+      });
       screenStream.getAudioTracks().forEach((track) => {
         const audioContext = new AudioContext();
         const source = audioContext.createMediaStreamSource(
@@ -172,15 +220,11 @@ export const useMediaStream = () => {
         screenStream.removeTrack(track);
         destination.stream.getAudioTracks().forEach((track) => {
           screenStream.addTrack(track);
-          track.contentHint = "detail";
-          track.onended = () => {
-            setLocalScreenStreamSource(null);
-            toggleMediaState({ screen: false });
-          };
         });
       });
       setLocalScreenStreamSource(screenStream);
       toggleMediaState({ screen: true });
+      return screenStream
     } catch (error) {
       console.error("Failed to start screen sharing:", error);
     }
@@ -257,24 +301,61 @@ export const useMediaStream = () => {
     console.log(micGainNodeRef.current);
   };
 
-  return {
-    localAudioSource: localAudioStreamSource,
-    muteAudio,
-    unmuteAudio,
-    localVideoSource: localScreenStreamSource,
-    startScreenShare,
-    stopScreenShare,
-    muteScreenAudio,
-    unmuteScreenAudio,
-    localWebcamSource: localWebcamStreamSource,
-    startWebcam,
-    stopWebcam,
-    clearStream,
-    checkGainNode,
-    micAvailable,
-    mediaState,
-    noiseLevel,
-    startVolumeDetector,
-    stopVolumeDetector,
-  };
+  return (
+    <MediaConfigContext.Provider
+      value={{
+        muteAudio,
+        unmuteAudio,
+        startScreenShare,
+        stopScreenShare,
+        muteScreenAudio,
+        unmuteScreenAudio,
+        startWebcam,
+        stopWebcam,
+        clearStream,
+        checkGainNode,
+        startVolumeDetector,
+        stopVolumeDetector,
+        localAudioSource: localAudioStreamSource,
+        localVideoSource: localScreenStreamSource,
+        localWebcamSource: localWebcamStreamSource,
+        micAvailable,
+        mediaState,
+        noiseLevel,
+      }}
+    >
+      {children}
+    </MediaConfigContext.Provider>
+  );
+
+  // return {
+  //   localAudioSource: localAudioStreamSource,
+  //   muteAudio,
+  //   unmuteAudio,
+  //   localVideoSource: localScreenStreamSource,
+  //   startScreenShare,
+  //   stopScreenShare,
+  //   muteScreenAudio,
+  //   unmuteScreenAudio,
+  //   localWebcamSource: localWebcamStreamSource,
+  //   startWebcam,
+  //   stopWebcam,
+  //   clearStream,
+  //   checkGainNode,
+  //   micAvailable,
+  //   mediaState,
+  //   noiseLevel,
+  //   startVolumeDetector,
+  //   stopVolumeDetector,
+  // };
+};
+
+export const useLocalMedia = () => {
+  const context = useContext(MediaConfigContext);
+  if (!context) {
+    throw new Error(
+      "useLocalMedia must be used within a LocalMediaConfigProvider"
+    );
+  }
+  return context;
 };
