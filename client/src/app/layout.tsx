@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import LayoutWrapper from "./components/LayoutWrapper";
-import { NavBar } from "./components/NavBar";
+import { NavBar } from "./components/NavBar/NavBar";
+import { MediaConfig } from "./components/MediaConfig";
+import FriendList from "./components/FriendList/FriendList";
+import MainPage from "./components/MainPage/MainPage";
+import AppHeader from "./components/AppHeader/AppHeader";
+import ServersSidebar from "./components/ServersSidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,19 +30,50 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" style={{ height: "100%", width: "100%", display: "flex" }}>
+    <html lang="en" style={{ height: "100%", width: "100%" }}>
       <body
         className={`${geistSans.variable} ${geistMono.variable}`}
         style={{
           height: "100%",
           width: "100%",
+          flex: 1,
           display: "flex",
           flexDirection: "column",
+          maxHeight: "100%",
+          backgroundColor: "oklab(0.183076 0.00112209 -0.00388214)",
         }}
       >
         <LayoutWrapper>
+          {/* <FriendList /> */}
           <NavBar />
-          <div
+          <AppHeader />
+          <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flex: 1,
+                  overflow: "auto",
+                  width: 400,
+                }}
+              >
+                <ServersSidebar />
+                <FriendList />
+              </div>
+              <MediaConfig />
+            </div>
+            <div style={{ height: "100%", width: '100%', overflow: "hidden auto" }}>
+              {children}
+            </div>
+          </div>
+          {/* <MainPage /> */}
+          {/* <div
             style={{
               padding: 10,
               height: "100%",
@@ -47,7 +83,7 @@ export default function RootLayout({
             }}
           >
             {children}
-          </div>
+          </div> */}
         </LayoutWrapper>
       </body>
     </html>
