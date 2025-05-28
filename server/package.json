@@ -3,25 +3,31 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
-  "type": "module",
   "scripts": {
     "dev": "nodemon --exec tsx src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js"
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "start": "node dist/server.js",
+    "container:build": "docker-compose build",
+    "container:up": "docker-compose up --scale discord-worker=4",
+    "container:down": "docker-compose down"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "@socket.io/sticky": "^1.0.4",
     "axios": "^1.8.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "http-proxy-middleware": "^3.0.5",
     "ioredis": "^5.6.0",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.1.0",
     "mediasoup": "^3.15.7",
     "nodemon": "^3.1.9",
     "prisma": "^6.5.0",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "tsc-alias": "^1.8.16"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

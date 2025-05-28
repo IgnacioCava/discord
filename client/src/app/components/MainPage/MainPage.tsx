@@ -1,7 +1,7 @@
 "use client";
 
 import AppHeader from "../AppHeader/AppHeader";
-import FriendList from "../FriendList/FriendList";
+import FriendList from "../DirectMessageList";
 import styled from "styled-components";
 
 const MainContainer = styled.div`

@@ -1,0 +1,2 @@
+2025/05/26 12:33:05 [notice] 17828#8900: signal process started
+2025/05/26 12:33:05 [error] 17828#8900: CreateFile() "C:\Users\User\Desktop\discord-clone\server/logs/nginx.pid" failed (2: El sistema no puede encontrar el archivo especificado)

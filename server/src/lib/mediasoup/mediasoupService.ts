@@ -1,5 +1,5 @@
 import { Workers } from "@customTypes/mediasoup";
-import mediasoup from "mediasoup";
+import * as mediasoup from "mediasoup";
 import os from "os";
 
 const workers: Workers = [];
@@ -20,13 +20,16 @@ const createWorker = async () => {
 };
 
 export const getWorker = () => {
+  if (workers.length === 0) {
+    throw new Error("No workers initialized yet!");
+  }
   const worker = workers[nextWorkerIndex].worker;
   nextWorkerIndex = (nextWorkerIndex + 1) % workers.length;
   return worker;
 };
 
 export const initWorkers = async () => {
-  const numWorkers = os.cpus().length;
+  const numWorkers = 2; //os.cpus().length;
   for (let i = 0; i < numWorkers; ++i) {
     await createWorker();
   }

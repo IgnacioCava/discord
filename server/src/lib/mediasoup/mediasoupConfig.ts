@@ -7,8 +7,8 @@ import {
 export const webRtcTransportOptions: WebRtcTransportOptions = {
   listenIps: [
     {
-      ip: process.env.PUBLIC_IP || '127.0.0.1', // Use 'localhost' for local testing, '0.0.0.0' for production
-      announcedIp: process.env.ANNOUNCED_IP || '127.0.0.1',
+      ip: process.env.PUBLIC_IP || '0.0.0.0', // Use 'localhost' for local testing, '0.0.0.0' for production
+      announcedIp: process.env.ANNOUNCED_IP || '0.0.0.0',
     },
   ],
   enableUdp: true,

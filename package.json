@@ -11,9 +11,16 @@
   "scripts": {
     "dev": "concurrently \"yarn start-front\" \"yarn start-back\" --names \"frontend,backend\" --prefix \"[{name}]\"",
     "start-front": "cd client && yarn devx",
-    "start-back": "cd server && yarn dev"
+    "start-back": "cd server && yarn dev",
+    "container:build": "docker-compose build",
+    "container:up": "bash ./scripts/container-up.sh",
+    "container:down": "docker-compose down",
+    "cb": "yarn container:build",
+    "cu": "yarn container:up",
+    "cd": "yarn container:down"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
   }
 }
+

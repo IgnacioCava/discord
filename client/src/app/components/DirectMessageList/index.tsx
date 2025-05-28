@@ -29,7 +29,7 @@ const mockFriends = [
   { name: "Diana" },
 ];
 
-const FriendList = () => {
+const DirectMessageList = () => {
   return (
     <div className={S.Container}>
       <div className={S.Header}>
@@ -67,4 +67,4 @@ const FriendList = () => {
   );
 };
 
-export default FriendList;
+export default DirectMessageList;

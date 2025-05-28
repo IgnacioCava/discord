@@ -80,7 +80,7 @@ export const editMessage = async (
       ...updatedMessage,
       status: "Success",
     });
-  } catch (error) {
+  } catch (error: any) {
     // If the creation operation fails, we notify the clients to update their UI.
     // socket.emit("edit-message-status", {
     //   error: `Failed to send message: ${error}`,
@@ -89,7 +89,7 @@ export const editMessage = async (
     //   status: "Error",
     // });
     statusCallback({
-      error: `Failed to send message: ${error}`,
+      error: `Failed to send message: ${error.message}`,
       id,
       content: prevContent,
       status: "Error",

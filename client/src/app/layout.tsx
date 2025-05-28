@@ -1,23 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./styles/global.css";
 import LayoutWrapper from "./components/LayoutWrapper";
 import { NavBar } from "./components/NavBar/NavBar";
 import { MediaConfig } from "./components/MediaConfig";
-import FriendList from "./components/FriendList/FriendList";
+import DirectMessageList from "./components/DirectMessageList";
 import MainPage from "./components/MainPage/MainPage";
 import AppHeader from "./components/AppHeader/AppHeader";
 import ServersSidebar from "./components/ServersSidebar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// const ggSans = localFont({
+//   src: "./styles/fonts/ggsansRegular.woff",
+//   display: "swap",
+//   variable: "--font-ggsans",
+// });
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -32,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" style={{ height: "100%", width: "100%" }}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable}`}
+        className={``}
         style={{
           height: "100%",
           width: "100%",
@@ -44,7 +40,6 @@ export default function RootLayout({
         }}
       >
         <LayoutWrapper>
-          {/* <FriendList /> */}
           <NavBar />
           <AppHeader />
           <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
@@ -64,11 +59,13 @@ export default function RootLayout({
                 }}
               >
                 <ServersSidebar />
-                <FriendList />
+                <DirectMessageList />
               </div>
               <MediaConfig />
             </div>
-            <div style={{ height: "100%", width: '100%', overflow: "hidden auto" }}>
+            <div
+              style={{ height: "100%", width: "100%", overflow: "hidden auto" }}
+            >
               {children}
             </div>
           </div>

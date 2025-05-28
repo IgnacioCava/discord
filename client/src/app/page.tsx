@@ -1,9 +1,14 @@
-"use client"
+"use client";
 
 import Image from "next/image";
 import styles from "./page.module.css";
+import { useEffect } from "react";
+import { redirect } from "next/navigation";
 
 export default function Home() {
+  useEffect(() => {
+    redirect("/channels/me");
+  }, []);
   return (
     <div className={styles.page}>
       <div className={styles.ctas}>
