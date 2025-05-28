@@ -1,27 +1,25 @@
-import { authenticateSocket } from "../middleware/auth";
-import http from "http";
-import { Server } from "socket.io";
-import { setupMessageSocket } from "@socket/events/message";
-import { HTTPSServer } from "./types";
-import { setupRoomSocket } from "@socket/events/room";
-import { findUser } from "@services/userService";
 import { addUserDataToSocket } from "@controllers/userController";
-import { setupChannelSocket } from "@socket/events/channel";
-import { setupUserSocket } from "@socket/events/user";
-import redis from "@lib/redis";
-import { setupVoiceSocket } from "./events/voice";
-import { setupTransportTest } from "./events/transportTest";
-import { setupTransportTest2 } from "./events/transportTest2";
+import { initPubSubService } from "@lib/socket.io/pubsubService";
 import { socketServer } from "@lib/socket.io/socketService";
+import { setupChannelSocket } from "@socket/events/channel";
+import { setupMessageSocket } from "@socket/events/message";
+import { setupRoomSocket } from "@socket/events/room";
+import { setupUserSocket } from "@socket/events/user";
+import { authenticateSocket } from "../middleware/auth";
 import { transportImport } from "./events/transportImport";
+import { setupVoiceSocket } from "./events/voice";
+import { HTTPSServer } from "./types";
+import { setupWorker } from "@socket.io/sticky";
 
-const initSocket = (server: HTTPSServer) => {
+const initSocket = async (server: HTTPSServer) => {
   const io = socketServer(server);
+  initPubSubService(io);
 
   io.use(authenticateSocket);
 
   io.on("connection", async (socket) => {
     try {
+      console.log(`Connected to ${process.pid}:${process.env.WORKER_PORT}`);
       //socket.on('join-voice-channel', console.log)
       await addUserDataToSocket(socket);
       await setupUserSocket(io, socket);
@@ -30,11 +28,9 @@ const initSocket = (server: HTTPSServer) => {
       setupMessageSocket(io, socket);
       setupChannelSocket(io, socket);
       setupVoiceSocket(io, socket);
-      // setupTransportTest(io, socket);
-      //setupTransportTest2(io, socket);
 
       socket.on("disconnect", () => {
-        console.log(`User disconnected: ${socket.id}`);
+        console.log(`User disconnected: ${socket.id} from ${process.pid}`);
         // socket.userDB = null;
         // socket.user = null;
         socket.handshake.auth.token = null;
@@ -61,7 +57,7 @@ const initSocket = (server: HTTPSServer) => {
       socket.disconnect();
     }
   });
-
+  //setupWorker(io);
   return io;
 };
 

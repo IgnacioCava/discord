@@ -14,6 +14,8 @@ export const addUserDataToSocket = async (socket: SocketServer) => {
     if (!user) throw new Error("User not found");
 
     socket.userDB = user;
+    redis.set(`userSocket:${user.id}`, socket.id);
+    socket.on("disconnect", () => redis.del(`userSocket:${user.id}`));
     socket.emit(`Welcome, ${user.name || "Guest"}`);
   } catch (error) {
     socket.emit("user-connection-error", {

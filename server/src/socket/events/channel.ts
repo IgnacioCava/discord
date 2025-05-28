@@ -5,7 +5,7 @@ import {
   addUserToTypingList,
   clearTypingOnDisconnect,
   removeUserFromTypingList,
-} from "@controllers/channelController";
+} from "@controllers/channelController/typingList";
 import redis from "@lib/redis";
 
 const typingUsers: Record<

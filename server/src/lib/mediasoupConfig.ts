@@ -34,7 +34,7 @@ export const routerOptions: RouterOptions = {
 export const webRtcTransportOptions: WebRtcTransportOptions = {
   listenIps: [
     {
-      ip: "127.0.0.1", // Use 'localhost' for local testing, '0.0.0.0' for production
+      ip: "0.0.0.0", // Use 'localhost' for local testing, '0.0.0.0' for production
       announcedIp: process.env.PUBLIC_IP || "127.0.0.1",
     },
   ],

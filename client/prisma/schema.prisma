@@ -57,8 +57,39 @@ model User {
   rooms         RoomMember[] // Link to RoomMember
   channels      ChannelMember[] // Link to RoomMember
 
+  isOnline      Boolean @default(false)
+
+  sentFriendRequests     UserRelationship[] @relation("sentFriendRequests")
+  receivedFriendRequests UserRelationship[] @relation("receivedFriendRequests")
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@unique([name])
+}
+
+model UserRelationship {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+
+  senderId    String   @db.ObjectId
+  sender      User     @relation("sentFriendRequests", fields: [senderId], references: [id])
+
+  receiverId  String   @db.ObjectId
+  receiver    User     @relation("receivedFriendRequests", fields: [receiverId], references: [id])
+
+  status      FriendshipStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([senderId, receiverId])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
 }
 
 model Room {
@@ -141,7 +172,7 @@ model Message {
   messageType      MessageType    @default(MESSAGE)
 
   createdAt        DateTime       @default(now())
-  updatedAt        DateTime?
+  updatedAt        DateTime       @updatedAt
   deletedAt        DateTime?
 }
 
@@ -165,3 +196,17 @@ model Role {
   createdAt    DateTime @default(now())
 }
 
+
+// ChannelMember permissions
+// VIEW	1 (binary 00001)
+// SEND_MESSAGE	2 (binary 00010)
+// MODERATE	4 (binary 00100)
+// MANAGE_CHANNELS	8 (binary 01000)
+// BAN_USERS	16 (binary 10000)
+
+// RoomMember permissions
+// VIEW	1 (binary 00001)
+// SEND_MESSAGE	2 (binary 00010)
+// MODERATE	4 (binary 00100)
+// MANAGE_CHANNELS	8 (binary 01000)
+// BAN_USERS	16 (binary 10000)

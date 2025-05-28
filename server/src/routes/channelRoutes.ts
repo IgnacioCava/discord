@@ -4,6 +4,7 @@ import { createRoom, getRoomData, getRooms } from "@controllers/roomController";
 import { createChannel } from "@controllers/channelController";
 
 const router = express.Router();
+router.use(authenticateUser);
 
 router.post("/create", authenticateUser, createChannel);
 

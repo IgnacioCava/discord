@@ -13,17 +13,22 @@ import redis from "@lib/redis";
 
 export const getRooms = async (req: Request, res: Response) => {
   const { roomId } = req.params; // Extract roomId from the URL
+  const userId = req.user?.id;
   try {
-    const rooms = await findRooms(req.user.id);
+    if (!userId) throw { message: "Unauthorized", status: 401 };
+
+    const rooms = await findRooms(userId);
 
     if (!rooms) {
       res.status(404).json({ error: "No rooms found" });
     }
 
     res.status(200).json(rooms);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching room data:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res
+      .status(error.status || 500)
+      .json({ error: error.message || "Internal server error" });
   }
 };
 
@@ -46,7 +51,11 @@ export const getRoomData = async (req: Request, res: Response) => {
 
 export const createRoom = async (req: Request, res: Response) => {
   const { name } = req.body;
-  const userId = req.user.id;
+  const userId = req.user?.id;
+  if(!userId) {
+    res.status(404).json({ error: "Unauthenticated" })
+    return
+  }
   try {
     if (!name) {
       res.status(400).json({ error: "Room name required" });

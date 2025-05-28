@@ -1,12 +1,14 @@
 "use client";
 
-import { io } from "socket.io-client";
+import { io, SocketOptions } from "socket.io-client";
 import { getSession } from "next-auth/react";
-
-const defaultSocketConfig = {
+import { ManagerOptions } from "socket.io-client";
+const defaultSocketConfig: Partial<ManagerOptions & SocketOptions> = {
   withCredentials: true,
   autoConnect: false,
   reconnection: true,
+  rejectUnauthorized: false,
+  secure: true,
 };
 
 const socket = io(

@@ -15,7 +15,7 @@ import {
   TabList,
 } from "./styles";
 import styled from "styled-components";
-import globe from "../../../../public/globe.svg";
+import globe from "../../../../../public/globe.svg";
 import Image from "next/image";
 
 const mockFriends = [
